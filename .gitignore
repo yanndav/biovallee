@@ -1,1 +1,3 @@
 socioEcoData/data/*
+!socioEcoData/data/toread.txt
+socioEcoData/script/.Rhistory
