@@ -213,13 +213,13 @@ if(!exists('inseeApiData')){
 } 
 
 
-iter = Sys.time()
+
 
 error = c()
 
 
 for(v in 1:nrow(variables)){
-  
+  iter = Sys.time()
   # --- Initialisation des paramètres de départ --- #
   
   
@@ -381,25 +381,3 @@ for(v in 1:nrow(variables)){
   }
 
 
-
-
-
-v = 1 # Variable choice
-year = 1 # Year choice
-g=1 # Geographic choice
-
-res <- get_dataset(token,
-                          jeu_donnees, 
-                          croisement, 
-                          modalite, 
-                          nivgeo, 
-                          codgeo)
-
-data_temp = res$donnees %>% # pour accéder aux données
-  mutate(annee = res$source$millesime_donnees,# pour accéder à la source
-         libgeo = res$info_zone$libelle_sans_article, # pour accéder aux données géographiques
-         anneegeo = res$info_zone$millesime_geo) 
-
-meta_temp = res$liste_code # pour accéder aux nomenclatures
-
-label = variables$label[v]
