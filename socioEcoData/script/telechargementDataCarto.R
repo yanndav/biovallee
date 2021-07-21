@@ -70,9 +70,13 @@ if(!("geocommune.RDS"%in%list.files(file.path(telechargements)))){
   
   
   saveRDS(geocommune_drome, file.path(telechargements,"geocommune_drome.RDS"))
+  
+  
+  
 } else {
   geocommune <- readRDS(file.path(telechargements,"geocommune.RDS"))
   geocommune_drome <- readRDS(file.path(telechargements,"geocommune_drome.RDS"))
+  
   
 }
 
@@ -119,10 +123,6 @@ departement  = st_read(file.path(topo,"DEPARTEMENT.shp")) %>%
   filter(INSEE_DEP==26)
 eau_drome  = st_crop(eau, extent(departement))
 saveRDS(eau_drome,file = file.path(telechargements,"eau_drome.RDS"))
-
-
-
-
 
 
 
