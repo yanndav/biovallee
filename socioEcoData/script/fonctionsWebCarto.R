@@ -2,6 +2,7 @@
 # Initialisation dossiers
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 telechargements <- sub('/script','/data',getwd())
+
 topo = file.path(telechargements,"topo")
 
 # Installation packages
@@ -230,25 +231,6 @@ Biovallee <- function(size=1.1,
   
 }
 
-# tempo = as.data.frame(biovallee_map) 
-# geometry = unique(tempo$geometry)
-# df = data.frame("facet"=)
-# 
-# geom_sf(data = tempo,size=size,alpha=0,
-#         linetype = line,fill=fill,aes(geometry=geometry))
-# 
-# 
-# ggplot()+
-#   geom_sf(data = tempo,size=size,alpha=0,
-#           linetype = line,fill=fill, aes(geometry=geometry))+
-#   facet_wrap(~.,ncol=3)
-# 
-# size=1.1
-# alpha=1
-# line="dotted"
-# fill="transparent"
-# facet = 1
-
 
 Communes <- function(echelle="departement",
                      size=1.1,
@@ -283,42 +265,177 @@ Communes <- function(echelle="departement",
 
 
 # 03. STATISTIQUES INSEE --------------------------------------------------
-Bases_insee <- function(){
-  if(!exists("inseeApiData")){
-    load(file = file.path(telechargements,"inseeApiData.RData"),
-         envir = globalenv())
+VariablesDansBase <- function(nom_base){
+  temp = insee_data[[nom_base]][["data"]] %>% 
+    dplyr::select(-CODGEO,-valeur,annee) %>% 
+    distinct()
+  for (i in 1:ncol(temp)) {
+    print(unique(temp[,i]))
+    
   }
-  data.frame("id"= names(inseeApiData),
-             "label" = sapply(inseeApiData, function(k){k[['label']]}),
-             row.names = 1:length(names(inseeApiData))
-             )
 }
 
-formattageData <- function(variable){
-  meta = inseeApiData[[variable]]$meta
-  inseeApiData[[variable]]$data %>% 
-    pivot_longer(cols = unlist(str_split(variable,"-")),
-                 names_to = "variable",
-                 values_to="modalite") %>% 
-    left_join(meta)
-
-}
-
-
-
-
-Modalite_insee <- function(variable){
-  if(!exists("inseeApiData")){
-    load(file = file.path(telechargements,"inseeApiData.RData"),
-         envir = globalenv())
-  }
-  formattageData(variable) %>% 
-    dplyr::select(mesure,lib_mesure,
-           variable, lib_varible,
-           modalite,lib_modalite) %>% 
-    unique()
+DimensionsDispo <- function(nom_base,variable, modalite){
+  insee_data[[nom_base]][["data"]] %>% 
+    dplyr::select(-CODGEO,-valeur,-annee) %>% 
+    filter(!!as.symbol(variable)==modalite) %>% 
+    distinct() 
   
 }
+
+EvolutionInsee <- function(
+  nom_base ,
+  echelle = "drome",
+  echelle_operateur = "sum",
+  denominateur=1,
+  group,  mono_dim){
+  
+  if(!exists("insee_data")){
+    load(file = file.path(telechargements,"insee_data.RData"),
+         envir = globalenv())
+  }
+  
+   dat = insee_data[[nom_base]][["data"]]
+  
+   if(is.character(denominateur)){
+     denom = insee_data$denominateur$data %>% 
+       dplyr::select(!! denominateur,CODGEO,annee,SEXE) %>% 
+       rename(denom = !!denominateur)
+     
+     dat <- dat %>% left_join(denom) %>% 
+       mutate(valeur = (as.numeric(valeur)/as.numeric(denom))) %>% 
+       dplyr::select(-denom)
+     
+     
+   }else{
+     dat <- dat %>%
+       mutate(valeur = (as.numeric(valeur)/denominateur))
+   }
+  
+  # Echelle spatiale désirée
+  if(echelle=="drome"|echelle=="departement"){
+    communes = geocommune_reg %>% 
+      filter(INSEE_DEP==26)
+  }else if(echelle=="biovallee"){
+    communes = geocommune_reg %>% 
+      filter(CODE_EPCI %in% unique(zonage_biovallee$EPCI))
+  }
+  
+  
+ 
+    base = dat %>%
+      filter(CODGEO %in% communes$INSEE_COM) %>% 
+      group_by_at(setdiff(names(dat), c("CODGEO","valeur"))) %>% 
+      mutate(valeur=as.numeric(valeur),
+             n= n()) %>% 
+      group_by_at(setdiff(names(.), c("CODGEO","valeur"))) 
+    
+    
+    
+  # Opération de regroupement à cette échelle
+  if(echelle_operateur=="sum"){
+    base = base %>% 
+      summarise(valeur = sum(valeur, na.rm=T))
+  }else if(echelle_operateur=="mean"){
+    base = base %>% 
+      summarise(valeur = mean(valeur, na.rm=T))
+  }else{
+    print("error no grouping operator")
+    break 
+  }
+  
+  # Conservation des dimensions de la facet
+  if(group[[1]][1]!="all"){
+    print("not all")
+    # Si seulement quelques modalités conservées, on les filtre
+    base = base %>%  
+      filter((!!as.symbol(names(group)[1])) %in% group[[1]])
+    dimensions = group[[1]]
+  }else{
+    print('all')
+    # Si toutes les modalités conservées, on enlève celle d'ensemble
+    base = base %>%  
+      filter((!!as.symbol(names(group)[1])) != "ENS")
+    
+    
+  }
+  
+  # Application du subset
+  for(variable in names(mono_dim)){
+    # Si toutes les modalités conservées, on enlève celle d'ensemble
+    base = base %>%  
+      filter((!!as.symbol(variable)) == mono_dim[[variable]])
+    
+    dimensions = unique(base[[names(group)[1]]])
+    
+    
+  }
+  
+  dim_reelle = nrow(base[base[[names(group)[1]]] %in% dimensions,])
+  dim_annee = length(unique(base$annee)) * length(dimensions)
+  
+  if(dim_reelle != dim_annee){
+    print('Problème de dimension: il y a plus de dimensions ville/année/variable/mesure que possible, revoyez les dimensions dans mono_dim')
+    
+    variables = names(base)[!(names(base) %in% c(names(group)[1],"annee","valeur"))]
+    for(var in variables){
+      print(paste(var, ":",paste(unique(base[[var]]),collapse =" ")))
+      valeurs = unique(base[[var]])
+      if(length(valeurs)>1){
+        print(paste("Problème de dimension sur la variable", var))
+        if("ENS"%in% valeurs){
+          print("Réduction à la valeur ENS")
+          base = base %>% 
+            filter((!!as.symbol(var)) == "ENS")
+          
+        }else{
+          print(paste("Pas de variable ENS trouvée, je fais l'opération",echelle_operateur,"sur la variable"))
+          # Opération de regroupement à cette échelle
+          if(echelle_operateur=="sum"){
+            base = base %>% 
+              dplyr::select(-(!!as.symbol(var))) %>% 
+              group_by_at(setdiff(names(base), c(var,"valeur"))) %>% 
+              
+              summarise(valeur = sum(valeur, na.rm=T)) %>% 
+              mutate(!!var := "ENS_genere")
+          }else if(echelle_operateur=="mean"){
+            base = base %>% 
+              dplyr::select(-(!!as.symbol(var))) %>% 
+              group_by_at(setdiff(names(base), c(var,"valeur"))) %>% 
+              
+              summarise(valeur = mean(valeur, na.rm=T))%>% 
+              mutate(!!var := "ENS_genere")
+          }else{
+            print("error no grouping operator")
+            break 
+          }
+          
+        }
+      }
+    }
+    
+    
+  }
+  
+
+  
+  
+  
+  base_temp = base %>% 
+    mutate(annee_fact =as.factor(paste0(annee,"\n(n=",n,")")))
+  
+  ggplot(data = base_temp,
+         aes_string(x="annee_fact",
+                    y="valeur",
+                    group= names(group)[1],
+                    color = names(group)[1]))+
+    geom_line()+
+    geom_point()
+  
+  
+  
+}
+
 
 CommunesInsee <- function(base, annee_,facet,mono_dim=NULL){
   if(!exists("inseeApiData")){

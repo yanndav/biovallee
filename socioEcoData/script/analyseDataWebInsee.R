@@ -11,6 +11,7 @@
 # Initialisation dossiers
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 telechargements <- sub('/script','/data',getwd())
+data_clean <- sub('/script','/data/insee_aura_clean',getwd())
 
 
 # Installation packages
@@ -27,7 +28,7 @@ invisible(lapply(tel,function(pack){
 
 # 01. CARTOGRAPHIE DE LA BIOVALLEE ----------------------------------------
 # Chargement des fonctions
-source("fonctionsCarto.R",encoding = "UTF-8")
+source("fonctionsWebCarto.R",encoding = "UTF-8")
 
 # Cartographie géographie département
 echelle = "departement"
@@ -65,9 +66,57 @@ ggplot()+
 
 
 # 02. CARTOGRAPHIE DONNEES INSEE ------------------------------------------
-
 # Chargement des données
-load(file = file.path(telechargements,"inseeApiData.RData"))
+if(!exists("insee_data")){
+    load(file = file.path(telechargements,"insee_data.RData"),
+         envir = globalenv())
+}
+
+
+# Nom des bases
+names(insee_data)
+
+# Exploration du nom des variables dans la base
+VariablesDansBase("caracteristique_emploi_mobilite_professionnelle")
+
+# Voir les dimensions disponibles pour une variable et une valeur précise
+View(DimensionsDispo("caracteristique_emploi_mobilite_professionnelle","STATUT","NSAL"))
+
+
+nom_base = "caracteristique_emploi_mobilite_professionnelle"
+echelle = "biovallee"
+echelle_operateur = "mean"
+group = list("SEXE"="all")
+# facet = list("STATUT"="all") 
+mono_dim = list("CONDITION"=	"ENS",
+                "AGE"="15P")
+
+denominateur = 'actif'
+
+EvolutionInsee(nom_base = nom_base,
+               echelle = echelle,
+               echelle_operateur = echelle_operateur,
+               group = group,
+               denominateur = denominateur,
+               mono_dim = mono_dim)
+
+
+### Evolution temporelle pour une dimension
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Nom des variables
@@ -130,11 +179,12 @@ view(Bases_insee())# Obtenir le nom des variables INSEE
 
 #### Creation fonction formattage graph
 
-base = "CS1_6" 
-Modalite_insee(base)
+base = "INDICS_FILO_DISP_DET" 
+View(Modalite_insee(base))
 annee_ = 2017
-facet = list("CS1_6"="all")
+facet = list("mesure"=c("PPFAM"))
 mono_dim = NULL
+# mono_dim = list("INDICS_FILO_DISP_DET"="1")
 
 ggplot()+
 CommunesInsee(base,annee_,facet,mono_dim)+
@@ -144,7 +194,7 @@ CommunesInsee(base,annee_,facet,mono_dim)+
   
 
 
-# 
+ 
 # variable = "IND_POPLEGALES"
 # label = inseeApiData[[variable]]$label
 # data = inseeApiData[[variable]]$data 
