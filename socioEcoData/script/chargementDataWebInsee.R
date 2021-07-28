@@ -44,6 +44,9 @@ invisible(lapply(tel,function(pack){
 geocommune_reg <- readRDS(file.path(data,"geocommune.RDS")) %>% 
   filter(INSEE_REG==84)
 
+saveRDS(geocommune_reg,file.path(telechargements,"geocommune_reg.RDS"))
+
+
 nrow(geocommune_reg) # On garde les 4030 communes de l'AURA pour les stats desc
 
 com_AURA = geocommune_reg$INSEE_COM
@@ -187,9 +190,62 @@ for(i in 1:length(to_load)){
   
 }
 
+meta_emploi = list(
+  
+  "annee" = list("nom"="année",
+                 "legende"=list("2006"="2006", 
+                                 "2007"="2007",
+                                 "2008"="2008",
+                                 "2009"="2009",
+                                 "2010"="2010",
+                                 "2011"="2011",
+                                 "2012"="2012",
+                                 "2013"="2013",
+                                 "2014"="2014",
+                                 "2015"="2015",
+                                 "2016"="2016",
+                                 "2017"="2017",
+                                 "2018"="2018")),
+  "STATUT"=list("nom"="statut professionel",
+                "legende"=list("ACTOCC"="actif occupé",
+                               "SAL"="salarié",
+                               "NSAL"="non salarié" )),
+  "SEXE" = list("nom"="sexe",
+                "legende"=list("ENS"="tous sexes confondus",
+                               "H"="hommes",
+                               "F"="femmes")),
+  "AGE" = list("nom"="groupe d'âge",
+               "legende"=list("15P"="15 ans et plus", 
+                              "1564"="15 à 64 ans",
+                              "1524"="15 à 24 ans",
+                              "2554"="25 à 54 ans",
+                              "5564"="55 à 64 ans")),
+  "TEMPS" = list("nom"="temps de travail",
+                 "legende"=list("ENS"="tous temps de travail confondus",
+                                "TP"="temps partiel")),
+  "CONDITION"=list("nom"="catégorie d'actif",
+                   "legende"=list("ENS"="toutes catégories d'actif confondus",
+                                  "CDI"="actifs en CDI",    
+                                  "CDD"="actifs en CDD",    
+                                  "INTERIM"="actifs en interim",
+                                  "EMPAID"="actifs en emploi aidé", 
+                                  "INDEP"="actifs indépendants",  
+                                  "EMPLOY"="actifs employés",
+                                  "AIDFAM"="actifs percevants les aides familiales")),
+  "LIEU"= list("nom"="lieu de travail",
+               "legende"=list("ENS"="tous lieux de travail confondus",  
+                              "ILT1"="travail dans commune de résidence",  
+                              "ILT2P"="travail dans autre commune que celle de résidence", 
+                              "ILT2"="travail dans autre commune que celle de résidence, même département",
+                              "ILT3"="travail dans autre département, même région",  
+                              "ILT4"="travail dans autre région de métropole",  
+                              "ILT5"="travail hors métropole",  
+                              "ILT45D"="travail hors de la région de résidence"))
+  )
 
-saveRDS(data_emploi,file = file.path(data_clean,"caracteristique_emploi_mobilite_professionnelle.RDS"))
-
+base_emploi = list("data"=data_emploi,
+                  "meta"=meta_emploi)
+save(base_emploi,file = file.path(data_clean,"caracteristique_emploi_mobilite_professionnelle.RData"))
 
 
 # 02. COUPLES - FAMILLES - MENAGES ----------------------------------------
@@ -321,9 +377,97 @@ for(i in 1:length(to_load)){
   
 }
 
+data_menage = readRDS(file.path(data_clean,"couples_familles_menages.RDS"))
+
+meta_menage = list(
+  
+  "annee" = list("nom"="année",
+                 "legende"=list("2006"="2006", 
+                                "2007"="2007",
+                                "2008"="2008",
+                                "2009"="2009",
+                                "2010"="2010",
+                                "2011"="2011",
+                                "2012"="2012",
+                                "2013"="2013",
+                                "2014"="2014",
+                                "2015"="2015",
+                                "2016"="2016",
+                                "2017"="2017",
+                                "2018"="2018")),
+  "EXPLOITATION"=list("nom"="exploitation",
+                      "legende"=list("C"="complémentaire",
+                                     "P"="principale")),
+  "MESURE"= list("nom"="mesure",
+                 "legende"=list("MEN"="ménages", 
+                                "PMEN"="population des ménages",
+                                "POP"="population",
+                                "FAM"="familles" )),
+  "AGE"=list('nom'="groupe d'âge",
+             "legende"=list("ENS"= "tous groupes d'âge confondus",
+                            "15P"= "15 ans et plus",
+                            "1519"="15 à 19 ans",
+                            "2024"="20 à 24 ans",
+                            "2539"="25 à 39 ans",
+                            "4054"="40 à 54 ans",
+                            "5564"="55 à 64 ans",
+                            "6579"="65 à 79 ans",
+                            "80P"="80 ans et plus" )),
+  "CSP"=list("nom"="catégorie socio-professionelle",
+             "legende"=list("ENS"="toutes catégories socio-professionnelles confondus",
+                            "CS1"="agriculteur exploitant",
+                            "CS2"="artisan, commerçant, chef d'entreprise",
+                            "CS3"="cadre, profession intellectuelle supérieure",
+                            "CS4"="profession intermediaire",
+                            "CS5"="employé",
+                            "CS6"="ouvrier",
+                            "CS7"="retraité",
+                            "CS8"="autre sans activité professionnelle")
+             ),
+  "MEN_COMPOSITION"=list("nom"="composition du ménage",
+                         "legende"=list(
+                           "ENS"="tous types de ménage",     
+                           "PSEUL"="personne seule",   
+                           "HSEUL"="homme seul",   
+                           "FSEUL"="femme seule",   
+                           "SFAM"="sans famille",    
+                           "FAM"="avec famille",     
+                           "COUPSENF"="couple sans enfant(s)",
+                           "COUPAENF"="couple avec enfant(s)",
+                           "FAMMONO"="famille monoparentale"
+                         )),
+  "POP_STATUT"=list("nom"="composition de la population",
+                    "legende"=list(
+                      "ENS"="toutes compositions de population confondues",   
+                      "PSEUL"="vivant seule", 
+                      "COUPLE"="vivant en couple",
+                      "MARIE"="marié", 
+                      "CELIB"="célibataire", 
+                      "VEUF"="veuf",  
+                      "DIVOR"="divorcé" 
+                    )),
+  "FAM_COMPOSITION"=list("nom"="composition familiale",
+                         "legende"=list(
+                           "ENS"="toutes compositions familiales confondues",      
+                           "COUPAENF"="couples avec enfants", 
+                           "FAMMONO"="famille monoparentale",  
+                           "HMONO"="famille monoparentale formée d'un homme seul",    
+                           "FMONO"="famille monoparentale formée d'une femme seule",    
+                           "COUPSENF"="couple sans enfant", 
+                           "NE24F0"="famille sans enfant de moins de 25 ans",   
+                           "NE24F1"="famille avec un enfant de moins de 25 ans",   
+                           "NE24F2"="famille avec deux enfants de moins de 25 ans",  
+                           "NE24F3"="famille avec trois enfants de moins de 25 ans",  
+                           "NE24F4P"="famille avec 4 enfants ou plus de moins de 25 ans" 
+                         ))
+)
+
+base_menage = list("data"=data_menage,
+                   "meta"=meta_menage)
 
 
-saveRDS(data_menage,file = file.path(data_clean,"couples_familles_menages.RDS"))
+
+save(base_menage,file = file.path(data_clean,"couples_familles_ménages.RData"))
 
 
 
@@ -405,7 +549,71 @@ for(i in 1:length(to_load)){
 }
 
 
-saveRDS(data_diplome,file = file.path(data_clean,"diplomes_formation.RDS"))
+meta_diplome = list(
+  
+  "annee" = list("nom"="année",
+                 "legende"=list("2006"="2006", 
+                                "2007"="2007",
+                                "2008"="2008",
+                                "2009"="2009",
+                                "2010"="2010",
+                                "2011"="2011",
+                                "2012"="2012",
+                                "2013"="2013",
+                                "2014"="2014",
+                                "2015"="2015",
+                                "2016"="2016",
+                                "2017"="2017",
+                                "2018"="2018")),
+  "EXPLOITATION"=list("nom"="exploitation",
+                      "legende"=list("C"="complémentaire",
+                                     "P"="principale")),
+  "MESURE"=list("nom"="population"),
+  "SEXE" = list("nom"="sexe",
+                "legende"=list("ENS"="tous sexes confondus",
+                               "H"="hommes",
+                               "F"="femmes")),
+  "SCOLARITE"=list("nom"="statut de scolarisation",
+                   "legende"=list(
+                     "ENS"="tous statuts de scolarisation confondus",  
+                     "SCOL"="scolarisé", 
+                     "NSCOL"="non scolarisé"
+                   )),
+  "AGE"= list("nom"="age",
+              "legende"=list(
+                "0205"="2 à 5 ans",
+                "0610"="6 à 10 ans",
+                "1114"="11 à 14 ans",
+                "1517"="15 à 17 ans",
+                "1824"="18 à 24 ans",
+                "2529"="25 à 29 ans",
+                "30P"="30 ans et plus",
+                "15P"="15 ans et plus")),
+  "ETUDE"=list("nom"="niveau de diplôme",
+               "legende"=list(
+                 "ENS"="tous niveaux de diplôme confondus",    
+                 "DIPL0"="sans diplôme",  
+                 "CEP"="diplômée du certificat d'études primaires",    
+                 "BEPC"="diplômée du BEPC ou brevet des collèges",   
+                 "CAPBEP"="diplômée du CAP ou BEP", 
+                 "BAC"="diplômée du baccalauréat ou brevet professionnel",    
+                 "BACP2"="diplômée de l'enseignement supérieur court",  
+                 "SUP"="diplômeée de l'enseignement supérieur long",    
+                 "DIPLMIN"="sans diplôme ou au plus un CEP",
+                 "SUP2"="diplômée BAC+2"  ,
+                 "SUP34"="diplômée BAC+3 ou BAC+4", 
+                 "SUP5"="diplômée BAC+5 ou plus"  
+               ))
+)
+
+base_diplome = list("data"=data_diplome,
+                   "meta"=meta_diplome)
+
+
+
+save(base_diplome,file = file.path(data_clean,"diplomes_formation.RData"))
+
+
 
 
 # 04. EVOLUTION STRUCTURE POPULATION - LOGEMENT - MIGRATIONS --------------------------------------
@@ -474,7 +682,86 @@ for(i in 1:length(to_load)){
 }
 
 
-saveRDS(data_structure,file = file.path(data_clean,"evol_structure_pop.RDS"))
+data_structure = readRDS(file = file.path(data_clean,"evol_structure_pop.RDS"))
+meta_structure= list(
+  "annee" = list("nom"="année",
+                 "legende"=list("2006"="2006", 
+                                "2007"="2007",
+                                "2008"="2008",
+                                "2009"="2009",
+                                "2010"="2010",
+                                "2011"="2011",
+                                "2012"="2012",
+                                "2013"="2013",
+                                "2014"="2014",
+                                "2015"="2015",
+                                "2016"="2016",
+                                "2017"="2017",
+                                "2018"="2018")),
+  "EXPLOITATION"=list("nom"="exploitation",
+                      "legende"=list("C"="complémentaire",
+                                     "P"="principale")),
+  "SEXE" = list("nom"="sexe",
+                "legende"=list("ENS"="tous sexes confondus",
+                               "H"="hommes",
+                               "F"="femmes")),
+  "AGE"=list("nom"="groupe d'âges",
+             "legende"=list(
+             "ENS"="tous groupes d'âges confondus",  
+             "0014"="0 à 14 ans", 
+             "1529"="15 à 29 ans", 
+             "3044"="30 à 44 ans", 
+             "4559"="45 à 59 ans", 
+             "6074"="60 à 74 ans", 
+             "75P"="75 ans et plus",  
+             "7589"="75 à 89 ans", 
+             "90P"="90 ans et plus",  
+              "0019"="0 à 19 ans", 
+              "2064"="20 à 64 ans", 
+              "65P"="65 ans et plus",  
+              "05P"="5 ans et plus",  
+              "0514"="5 à 14 ans", 
+              "1524"="15 à 24 ans", 
+              "2554"="25 à 54 ans", 
+              "55P"="55 ans et plus",  
+              "15P"="15 ans et plus",  
+              "01P"="1 an et plus",  
+              "0114"="1 à 14 ans")),
+  
+  "CSP"=list("nom"="catégorie socio-professionelle",
+             "legende"=list("ENS"="toutes catégories socio-professionnelles confondus",
+                            "CS1"="agriculteur exploitant",
+                            "CS2"="artisan, commerçant, chef d'entreprise",
+                            "CS3"="cadre, profession intellectuelle supérieure",
+                            "CS4"="profession intermediaire",
+                            "CS5"="employé",
+                            "CS6"="ouvrier",
+                            "CS7"="retraité",
+                            "CS8"="autre sans activité professionnelle")
+  ),
+  "MOBILITE"=list("nom"="mobilité résidentielle depuis 5 ans",
+                  "legende"=list(
+                    "ENS"="toutes mobilités résidentielles confondues",     
+                    "IRAN1"="habitant auparavant dans le même logement",   
+                    "IRAN2"="habitant auparavant dans un autre logement de la même commune",   
+                    "IRAN3"="habitant auparavant dans une autre commune du même département",   
+                    "IRAN4"="habitant auparavant dans un autre département de la même région",   
+                    "IRAN5"="habitant auparavant dans une autre région de métropole",   
+                    "IRAN6"="habitant auparavant dans un département d'outre-mer" ,  
+                    "IRAN7"="habitant auparavant hors de métropole ou d'outre-mer",   
+                    "IRAN3P"="habitant auparavant une autre commune",  
+                     "IRAN2P"=  "habitant auparavant un autre logement"
+                  ))
+)
+
+base_structure = list("data"=data_structure,
+                      "meta"=meta_structure)
+
+
+
+save(base_structure,file = file.path(data_clean,"evol_structure_pop.RData"))
+
+
 
 # 05. LOGEMENT ------------------------------------------------------------
 
@@ -584,9 +871,122 @@ data_logements <- data_logements %>%
   }
 }
 
-saveRDS(data_logements,file = file.path(data_clean,"data_logements.RDS"))
+data_logements = readRDS(file = file.path(data_clean,"data_logements.RDS"))
+meta_logements = list(
+  "annee" = list("nom"="année",
+                 "legende"=list("2006"="2006", 
+                                "2007"="2007",
+                                "2008"="2008",
+                                "2009"="2009",
+                                "2010"="2010",
+                                "2011"="2011",
+                                "2012"="2012",
+                                "2013"="2013",
+                                "2014"="2014",
+                                "2015"="2015",
+                                "2016"="2016",
+                                "2017"="2017",
+                                "2018"="2018")),
+  "EXPLOITATION"=list("nom"="exploitation",
+                      "legende"=list("C"="complémentaire",
+                                     "P"="principale")),
+  "OCCUPATION"=list("nom"="occupation du logement",
+                    "legende"=list(
+                      "ENS"="toutes occupations du logement confonfues",
+                      "RP"="résidence principale",
+                      "RSECOCC"="résidence secondaire et logement occasionel",   
+                      "LOGVAC"="logement vacant"    
+                    )),
+  "CONSTRUCTION"=list("nom"="type de construction",
+                      "legende"=list("ENS"="tous types de construction",
+                                     "MAISON"="maison",
+                                     "APPART"="appartement")),
+  "BAIL"=list("nom"="statut d'occupation",
+              "legende"=list(
+                "ENS"="tous status d'occupation confondus",    
+                "PROP"  ="occupé par propriétaire", 
+                "LOC"="occupé par locataire",    
+                "LOCHLMV"="HLM loué vide",
+                "GRAT"="occupé gratuitement"   
+              )), 
+  "MESURE"=list("nom"="mesure",
+                "legende"=list(
+                  "LOG"="nombre de logemen(t)",
+                  "NBPI"="nombre de pièce(s)", 
+                  "MEN"="nombre de ménage(s)",    
+                  "PMEN"="population des ménages",   
+                  "NPER_RP"="nombre de personnes en résidences principales",
+                  "ANEM_RP"="ancienneté totale d'emménagement"
+                )),
+  "VOITURE"=list("nom"="possession automobile",
+                 "legende"=list(
+                   "ENS"="toutes possessions automobiles confondues",   
+                   "GARL"="au moins un parking" ,
+                   "VOIT1P"="une voiture ou plus",
+                   "VOIT1"="une voiture", 
+                   "VOIT2P"="deux voitures ou plus"
+                 )),
+  "EQUIPEMENT"=list(
+    "nom"="équipement des résidences principales",
+    "legende"=list(
+      "ENS"="tous équipements confondus",     
+      "SDB"="salle de bain",     
+      "CCCOLL"="chauffage central collectif",  
+      "CCIND"="chauffage central individuel",
+      "CINDELEC"="chauffage individuel electrique",
+      "ELEC"="électricité",    
+      "EAUCH"="eau chaude",   
+      "BDWC"="bain/douche wc",    
+      "CHOS"="chaufe-eau solaire",    
+      "CLIM"="pièce climatisée",   
+      "TTEGOU"="tout à l'égoût", 
+      "HABFOR"="habitation de fortune", 
+      "CASE"="case traditionnelle",   
+      "MIBOIS"="logement en bois", 
+      "MIDUR"="logement en dur" )),
+  
+  "EMMENAGEMENT"=list("nom"="ancienneté d'emménagement",
+                      "legende"=list(
+                        "ENS"="toutes anciennetés d'emménagement",     
+                        "ANEM0002"="emménagement depuis moins de 2 ans",
+                        "ANEM0204"="emménagement entre 2 et 4 ans",
+                        "ANEM0509"="emménagement entre 5 et 9 ans",
+                        "ANEM10P"="emménagement depuis 10 ans ou plus", 
+                        "ANEM1019"="emménagement entre 10 et 19 ans",
+                        "ANEM2029"="emménagement entre 20 et 29 ans",
+                        "ANEM30P"="emmménagement depuis 30 ans ou plus" 
+                      )),
+  "DATE_CONSTRUCTION"=list(
+    "nom"="date de construction",
+    "legende"=list(
+      "ENS"="toutes dates de construction",  
+      "ACHTT"="avant 2004",
+      "ACHT1"="avant 1949",
+      "ACHT2"="entre 1949 et 1974",
+      "ACHT3"="entre 1975 et 1989",
+      "ACHT4"="entre 1989 et 3 ans avant sondage"
+    )
+  ),
+  "NB_PIECE" = list("nom"="nombre de pièces",
+                    "legende"=list(
+                      "ENS"="tous nombres de pièces confondus",
+                      "1P"="une pièce", 
+                      "2P"="deux pièces", 
+                      "3P"="trois pièces", 
+                      "4P"="quatre pièces", 
+                      "5P"="cinq pièces ou plus", 
+                      "0P"="erreur" 
+                    ))
+ 
+  
+)
 
 
+base_logements = list('data' = data_logements,
+                      "meta"= meta_logements )
+
+
+save(base_logements,file = file.path(data_clean,"logements_migrations_residentielles.Rdata"))
 
 # 06. POPULATION ACTIVE CHOMAGE -------------------------------------------
 
@@ -677,7 +1077,101 @@ for(i in 1:length(to_load)){
       rbind(temp1)
   }
 }
-saveRDS(data_chomage,file = file.path(data_clean,"population_active_emploi_chômage.RDS"))
+
+data_chomage = readRDS(file = file.path(data_clean,"population_active_emploi_chômage.RDS"))
+
+meta_chomage = list(
+  "annee" = list("nom"="année",
+                 "legende"=list("2006"="2006", 
+                                "2007"="2007",
+                                "2008"="2008",
+                                "2009"="2009",
+                                "2010"="2010",
+                                "2011"="2011",
+                                "2012"="2012",
+                                "2013"="2013",
+                                "2014"="2014",
+                                "2015"="2015",
+                                "2016"="2016",
+                                "2017"="2017",
+                                "2018"="2018")),
+  "EXPLOITATION"=list("nom"="exploitation",
+                      "legende"=list("C"="complémentaire",
+                                     "P"="principale")),
+  
+  "SEXE" = list("nom"="sexe",
+                "legende"=list("ENS"="tous sexes confondus",
+                               "H"="hommes",
+                               "F"="femmes")),
+  "AGE" = list("nom"="groupe d'âge",
+               "legende"=list("15P"="15 ans et plus", 
+                              "1564"="15 à 64 ans",
+                              "1524"="15 à 24 ans",
+                              "2554"="25 à 54 ans",
+                              "5564"="55 à 64 ans",
+                              "ENS"="tout groupe d'âge confondu")),
+  "CSP"=list("nom"="catégorie socio-professionelle",
+             "legende"=list("ENS"="toutes catégories socio-professionnelles confondus",
+                            "CS1"="agriculteur exploitant",
+                            "CS2"="artisan, commerçant, chef d'entreprise",
+                            "CS3"="cadre, profession intellectuelle supérieure",
+                            "CS4"="profession intermediaire",
+                            "CS5"="employé",
+                            "CS6"="ouvrier",
+                            "CS7"="retraité",
+                            "CS8"="autre sans activité professionnelle")
+  ),
+  "MESURE"=list(
+    "nom"="mesure",
+    "legende"=list(
+      "POP"="nombre de personnes",
+      "EMPLT"="nombre d'emplois au lieu de travail"
+    )
+  ),
+  "STATUT"=list("nom"="statut professionel",
+                "legende"=list(
+                  "ENS"="tous statuts professionel confondus",
+                  "ACTOCC"="actif occupé",
+                  "ACT"="actif",
+                  "CHOM"="chômeur",
+                  "INACT"="inactif",
+                  "ETUD"="étudiant",
+                  "RETR"="retraité",
+                  "AINACT"="autre inactif")),
+  "TEMPSTR"=list(
+    "nom"="temps de travail",
+    "legende"=list(
+      "ENS"="tous temps de travail confondus",
+      "TP"="temps plein"
+    )
+  ),
+  "SALARIE" = list(
+    "nom"="statut salarial",
+    "legende"=list("ENS"="salarié et non salarié",
+                   "SAL"="salarié",
+                   "NSAL"="non salarié")
+  ),
+  "SECTEUR"=list(
+    "nom"="secteur d'activité",
+    "legende"=list(
+      "ENS"="tous secteurs d'activité confondus",    
+      "AGRI"="agriculture",   
+      "INDUS"="industrie",  
+      "CONST"="construction",  
+      "CTS"="commerce, transports, services",    
+      "APESAS"="administration publique, enseignement, santé, action sociale"
+    )
+  )
+)
+
+
+base_chomage = list(
+  "data"=data_chomage,
+  "meta"=meta_chomage
+)
+
+save(base_chomage, file = file.path(data_clean,"population_active_emploi_chômage.Rdata"))
+
 
 
 # XX. SAUVERGARDE DU FICHIER ----------------------------------------------
@@ -688,16 +1182,16 @@ liste = list.files(path = data_clean )
 # Chargement des données
 insee_data = list()
 insee_data = lapply(liste, function(x){
-  list("data"=readRDS(file.path(data_clean,x)))
+  get(load(file.path(data_clean,x)))
 })
-names(insee_data) = sapply(liste, function(x) str_remove_all(x,"data_|.RDS"))
+names(insee_data) = sapply(liste, function(x) str_remove_all(x,".RData|.Rdata"))
 
 
-View(insee_data$evol_structure_pop$data )
+View(insee_data$evol_structure_pop )
 data_census = insee_data$evol_structure_pop$data %>% 
   filter_at(vars("AGE","CSP","MOBILITE"), all_vars(.=="ENS")) %>% 
   rename(population=valeur) %>% 
-  dplyr::select(CODGEO,SEXE,pop,annee)
+  dplyr::select(CODGEO,SEXE,population,annee)
 
 
 data_actifs = insee_data$population_active_emploi_chômage$data %>% 

@@ -68,30 +68,42 @@ ggplot()+
 # 02. CARTOGRAPHIE DONNEES INSEE ------------------------------------------
 # Chargement des données
 if(!exists("insee_data")){
-    load(file = file.path(telechargements,"insee_data.RData"),
+    load(file = file.path(telechargements,"insee_data.Rdata"),
          envir = globalenv())
 }
-
 
 # Nom des bases
 names(insee_data)
 
 # Exploration du nom des variables dans la base
-VariablesDansBase("caracteristique_emploi_mobilite_professionnelle")
+VariablesDansBase("diplomes_formation")
 
 # Voir les dimensions disponibles pour une variable et une valeur précise
-View(DimensionsDispo("caracteristique_emploi_mobilite_professionnelle","STATUT","NSAL"))
+View(DimensionsDispo("diplomes_formation","ETUDE","BAC"))
 
 
-nom_base = "caracteristique_emploi_mobilite_professionnelle"
-echelle = "biovallee"
-echelle_operateur = "mean"
+nom_base="logements_migrations_residentielles"
+graphsPossibles(nom_base)
+obtenirGraph(nom_base,72,echelle = "biovallee")
+
+
+
+
+
+
+nom_base = "diplomes_formation"
+echelle = "drome"
+echelle_operateur = "sum"
 group = list("SEXE"="all")
 # facet = list("STATUT"="all") 
-mono_dim = list("CONDITION"=	"ENS",
-                "AGE"="15P")
+mono_dim = list(
+  "ETUDE"="SUP5",
+  "SCOLARITE"="NSCOL",
+  
+                "AGE"="15P"
+                )
 
-denominateur = 'actif'
+denominateur = 1
 
 EvolutionInsee(nom_base = nom_base,
                echelle = echelle,
@@ -99,6 +111,8 @@ EvolutionInsee(nom_base = nom_base,
                group = group,
                denominateur = denominateur,
                mono_dim = mono_dim)
+
+
 
 
 ### Evolution temporelle pour une dimension
@@ -208,4 +222,3 @@ CommunesInsee(base,annee_,facet,mono_dim)+
 # 
 # dep = nrow(unique( data %>% filter(nivgeo=="DEP") %>% select(libgeo)))==1
 # reg = nrow(unique( data %>% filter(nivgeo=="REG") %>% select(libgeo)))==1
-

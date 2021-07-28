@@ -270,16 +270,109 @@ VariablesDansBase <- function(nom_base){
     dplyr::select(-CODGEO,-valeur,annee) %>% 
     distinct()
   for (i in 1:ncol(temp)) {
-    print(unique(temp[,i]))
+    cat(paste("Nom de la variable: ",names(temp[,i]),"\n"))
+    cat(paste("Label de la variable: ",insee_data[[nom_base]][["meta"]][[names(temp[,i])]]$nom,"\n\n"))
+    
+    print(data.frame("identifiant label" = pull(unique(temp[,i])),
+                     "label"= sapply(pull(unique(temp[,i])), function(item){insee_data[[nom_base]][["meta"]][[names(temp[,i])]]$legende[[item]]})))
+    cat("\n\n-------------------\n\n")
+  }
+  
+}
+
+graphsPossibles <- function(nom_base,silent=F){
+  if(!exists(paste0("listegraphs_",nom_base))){
+    base_temp = insee_data[[nom_base]][["data"]] %>% 
+    dplyr::select(-CODGEO,-valeur,-annee) %>% 
+    distinct()
+  
+  variables = names(base_temp)
+  
+  liste_graphs = list()
+  
+  doc_graphs = c()
+  for(i in 1:nrow(base_temp)){
+    mono_dim=list()
+    for(var in variables){
+      t =base_temp[[var]][i]
+      if(!is.na(t)){
+        mono_dim[[var]] = t
+      }
+    }
+    
+    mesures = mesure(base_temp, nom_base , insee_data, mono_dim)
+      
+      
+      dimensions = paste(sapply(names(mono_dim)[which(!(names(mono_dim) %in% c("EXPLOITATION","MESURE")))], function(name){
+        if(!is.null(mono_dim[[name]])){
+         paste0(insee_data[[nom_base]][["meta"]][[name]]$legende[[mono_dim[[name]]]],", ")
+        }else{
+          ""
+        }
+      } )
+      , collapse = "")
+      
+      
+      annees = suppressMessages((base_temp[i,] %>% inner_join(
+        insee_data[[nom_base]][["data"]] %>% 
+          dplyr::select(-CODGEO,-valeur)%>% 
+          distinct() ))[["annee"]])
+      
+      legende_annee = paste(", entre", min(annees), "et", max(annees))
+      
+      
+      graph_desc = paste0(i,':',str_to_sentence(paste0(mesures," ",dimensions,legende_annee)),
+       "\n",
+       paste(sapply(colnames(base_temp[i,]),function(name){paste0(name,": ", base_temp[[name]][i],"  -  ")}),collapse = ""),
+        '\n--\n'
+      )
+        
+        doc_graphs = c(doc_graphs,graph_desc)
+   
+      
+     
+      
+      liste_graphs[[i]] = mono_dim
+     
+  }
+  assign(paste0("graphs_",nom_base),liste_graphs, envir = globalenv())
+  assign(paste0("listegraphs_",nom_base),doc_graphs, envir = globalenv())
+  
+  }
+  if(!silent){
+    cat(get(paste0("listegraphs_",nom_base)))
     
   }
+
 }
+
+obtenirGraph <- function(nom_base,numero_graph,echelle="drome",group=NULL,echelle_operateur="sum",denominateur=1){
+ if(!exists(paste0('graphs_',nom_base))){
+   print('Je génère les possibilités de graphs')
+   graphsPossibles(nom_base,silent=T)
+ }
+  
+  mono_dim = get(paste0('graphs_',nom_base))[[numero_graph]]
+  
+  EvolutionInsee(nom_base = nom_base,
+                 echelle = echelle,
+                 echelle_operateur = echelle_operateur,
+                 group = group,
+                 denominateur = denominateur,
+                 mono_dim = mono_dim)
+  
+  
+}
+
+
+
 
 DimensionsDispo <- function(nom_base,variable, modalite){
   insee_data[[nom_base]][["data"]] %>% 
     dplyr::select(-CODGEO,-valeur,-annee) %>% 
     filter(!!as.symbol(variable)==modalite) %>% 
     distinct() 
+
   
 }
 
@@ -293,6 +386,10 @@ EvolutionInsee <- function(
   if(!exists("insee_data")){
     load(file = file.path(telechargements,"insee_data.RData"),
          envir = globalenv())
+  }
+  if(!exists("geocommune_reg")){
+    geocommune_reg = readRDS(file.path(telechargements,"geocommune_reg.RDS"))
+    
   }
   
    dat = insee_data[[nom_base]][["data"]]
@@ -344,21 +441,27 @@ EvolutionInsee <- function(
     break 
   }
   
-  # Conservation des dimensions de la facet
-  if(group[[1]][1]!="all"){
-    print("not all")
-    # Si seulement quelques modalités conservées, on les filtre
-    base = base %>%  
-      filter((!!as.symbol(names(group)[1])) %in% group[[1]])
-    dimensions = group[[1]]
-  }else{
-    print('all')
-    # Si toutes les modalités conservées, on enlève celle d'ensemble
-    base = base %>%  
-      filter((!!as.symbol(names(group)[1])) != "ENS")
+  if(!is.null(group)){
+    if(names(group)[1]%in% names(mono_dim)){
+      mono_dim = within(mono_dim, rm(list=names(group)[1]))
+    }
     
-    
+    # Conservation des dimensions de la variable de groupement
+    if(group[[1]][1]!="all"){
+      print("not all")
+      # Si seulement quelques modalités conservées, on les filtre
+      base = base %>%  
+        filter((!!as.symbol(names(group)[1])) %in% group[[1]])
+      dimensions = group[[1]]
+    }else{
+      print('all')
+      # Si toutes les modalités conservées, on enlève celle d'ensemble
+      base = base %>%  
+        filter((!!as.symbol(names(group)[1])) != "ENS")
+      
+    }
   }
+
   
   # Application du subset
   for(variable in names(mono_dim)){
@@ -366,15 +469,23 @@ EvolutionInsee <- function(
     base = base %>%  
       filter((!!as.symbol(variable)) == mono_dim[[variable]])
     
-    dimensions = unique(base[[names(group)[1]]])
-    
-    
+    if(!is.null(group)){
+      dimensions = unique(base[[names(group)[1]]])
+      
+    } 
   }
   
-  dim_reelle = nrow(base[base[[names(group)[1]]] %in% dimensions,])
-  dim_annee = length(unique(base$annee)) * length(dimensions)
+    if(is.null(group)){
+      dim_annee = length(unique(base$annee))
+      dim_reelle = nrow(base)
+      
+    }else{
+      dim_reelle = nrow(base[base[[names(group)[1]]] %in% dimensions,])
+      dim_annee = length(unique(base$annee)) * length(dimensions)
+    }
   
-  if(dim_reelle != dim_annee){
+  
+  if(dim_reelle > dim_annee){
     print('Problème de dimension: il y a plus de dimensions ville/année/variable/mesure que possible, revoyez les dimensions dans mono_dim')
     
     variables = names(base)[!(names(base) %in% c(names(group)[1],"annee","valeur"))]
@@ -424,20 +535,119 @@ EvolutionInsee <- function(
   base_temp = base %>% 
     mutate(annee_fact =as.factor(paste0(annee,"\n(n=",n,")")))
   
-  ggplot(data = base_temp,
-         aes_string(x="annee_fact",
-                    y="valeur",
-                    group= names(group)[1],
-                    color = names(group)[1]))+
-    geom_line()+
-    geom_point()
+
+  if(is.null(group)){
+    ggplot(data = base_temp,
+                  aes_string(x="annee_fact",
+                             y="valeur",
+                             group =1))+
+      geom_line()+
+      geom_point()+
+      theme_light()+
+      labs(title = paste(strwrap(titre(base_temp,nom_base, mono_dim,echelle, group, insee_data,denominateur), width = 80), collapse = "\n"),
+           y=str_to_sentence(mesure(base_temp, nom_base , insee_data, mono_dim, denominateur)),
+           x="Année")
+  }else{
+    ggplot(data = base_temp,
+                  aes_string(x="annee_fact",
+                             y="valeur",
+                             group= names(group)[1],
+                             color = names(group)[1]))+
+      geom_line()+
+      geom_point()+
+      theme_light()+
+      scale_color_npg(labels=labels(insee_data,group))+
+      labs(title = paste(strwrap(titre(base_temp,nom_base, mono_dim,echelle, group, insee_data,denominateur), width = 80), collapse = "\n"),
+           y=str_to_sentence(mesure(base_temp, nom_base , insee_data, mono_dim, denominateur)),
+           x="Année",
+           colour=legende(insee_data,group))
+  }
+  
   
   
   
 }
+labels = function(insee_data,group){
+  sapply(insee_data[[nom_base]]$meta[[names(group)[1]]]$legende,str_to_sentence)
+}
+legende = function(insee_data,group){
+  str_to_sentence(insee_data[[nom_base]]$meta[[names(group)[1]]]$nom)
+}
 
+mesure <-  function(base_temp,nom_base,insee_data, mono_dim, denominateur=NULL){
+  
+  # Obtention du nom de la mesure
+  if("MESURE" %in% names(base_temp) & length(unique(base_temp[["MESURE"]]))==1){
+    # Si incluse dans la base par le jeu du subset
+    valeur = unique(base_temp[["MESURE"]])
+    mesure =  insee_data[[nom_base]][["meta"]]$MESURE$legende[[valeur]]
+  }else if("MESURE" %in% names(mono_dim)){
+    valeur = mono_dim[["MESURE"]]
+    mesure =  insee_data[[nom_base]][["meta"]]$MESURE$legende[[valeur]]
+  }else{
+    # Si pas de variable de mesure, alors récupère la première légende de mesure
+    # dans méta
+    mesure = insee_data[[nom_base]][["meta"]]$MESURE$nom
+  }
+  
+  if(!is.null(denominateur)){
+    # Intégration de l'effet de dénominateur
+    if(is.character(denominateur)){
+      mesure = paste(mesure,"par",denominateur)
+    }else if(is.numeric(denominateur) & denominateur>1){
+      mesure = paste(mesure,"divisé par",denominateur)
+      
+    }
+    
+  }
 
-CommunesInsee <- function(base, annee_,facet,mono_dim=NULL){
+  if("valeur"%in%names(base_temp)){
+    # Conversion en pourcentage
+    if(min(base_temp$valeur)>=0 & max(base_temp$valeur)<=1){
+      mesure = str_replace(mesure, "nombre de","pourcentage de")
+    }
+    
+    
+  }
+  
+
+  if(mesure == "population par population"){
+    mesure = "pourcentage de la population"
+  }
+  
+  
+  return(mesure)
+}
+
+titre <- function(base_temp,nom_base, mono_dim,echelle, group, insee_data,denominateur){
+
+  mesures = str_to_sentence(mesure(base_temp, nom_base, insee_data, mono_dim, denominateur))
+  
+  
+  dimensions = paste(sapply(names(mono_dim)[which(!(names(mono_dim) %in% c("MESURE","EXPLOITATION")))], function(name){
+    if(mono_dim[[name]]!="ENS"){
+      paste0(insee_data[[nom_base]][["meta"]][[name]]$legende[[mono_dim[[name]]]],", ")
+    }else{
+      ""
+    }
+  } )
+  , collapse = "")
+  
+  if(!is.null(group)){
+    nom_groupe = paste("par", insee_data[[nom_base]][["meta"]][[names(group)[1]]]$nom,", ")
+  }else{
+    nom_groupe=""
+  }
+  
+  zone = paste0(" de la ",str_to_sentence(echelle),", ")
+  annees = as.numeric(base_temp$annee)
+  legende_annee = paste("entre", min(annees), "et", max(annees))
+  
+  return(paste0(mesures,zone,dimensions,nom_groupe,legende_annee))
+  
+}
+
+CommunesInsee <- function(base, annee_,group,mono_dim=NULL){
   if(!exists("inseeApiData")){
     load(file = file.path(telechargements,"inseeApiData.RData"),
          envir = globalenv())
@@ -629,5 +839,4 @@ Theme <- function(){
   )
   
 }
-
 
